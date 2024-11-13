@@ -1,16 +1,18 @@
 import asyncio
 import random
 import aiohttp  # Библиотека для асинхронных HTTP-запросов
-from aiogram import Bot, Dispatcher, F
+from aiogram import Bot, Dispatcher, F, types
 from aiogram.filters import CommandStart, Command
 from aiogram.types import Message, FSInputFile
 from gtts import gTTS
 import os
+from googletrans import Translator
 
 from config import TOKEN, WEATHER_API_KEY  # Добавьте WEATHER_API_KEY в ваш файл config.py
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
+translator = Translator()
 
 @dp.message(Command('video'))
 async def video(message: Message):
@@ -57,7 +59,7 @@ async def training(message: Message):
     tts.save('training.ogg')
     audio = FSInputFile('training.ogg')
     await bot.send_voice(message.chat.id, audio)
-    # os.remove(('training.ogg'))
+    os.remove('training.ogg')
 
 
 # @dp.message(Command('photo', prefix='&'))
@@ -75,14 +77,14 @@ async def react_photo(message: Message):
     list = ['Непонятно, что это такое', 'Не отправляй мне такое больше!', 'Ого! Какая красивая фотка!']
     random_answer = random.choice(list)
     await message.answer(random_answer)
-    await bot.download(message.photo[-1], destination=f'tmp/{message.photo[-1].file_id}.jpg')
+    await bot.download(message.photo[-1], destination=f'img/{message.photo[-1].file_id}.jpg')
 
-
+'''
 @dp.message(F.text == 'Что такое ИИ?')
 async def help(message: Message):
     await message.answer(
         'Искусственный интеллект (англ. artificial intelligence; AI) в самом широком смысле — это интеллект, демонстрируемый машинами, в частности компьютерными системами.')
-
+'''
 
 @dp.message(Command('help'))
 async def help(message: Message):
@@ -96,12 +98,19 @@ async def help(message: Message):
                          '\n /doc '
                          '\n /voice'
                          '\n /training '
-                         '\n Бот также умеет отвечать на вопрос "Что такое ИИ?"',)
+                         '\n Бот преводит текстовые сообщения пользователя с русского языка на английский')
+                         #'\n Бот также умеет отвечать на вопрос "Что такое ИИ?"',)
 
 
 @dp.message(CommandStart())
 async def start(message: Message):
-    await message.answer(f'Приветики, {message.from_user.full_name}! Я бот!')
+    await message.answer(f'Привет, {message.from_user.full_name}! Я бот!')
+    # Отправка приветствия в виде звукового сообщения
+    tts = gTTS(text=f'Привет, {message.from_user.full_name}! Я бот!', lang='ru')
+    tts.save('gr.ogg')
+    audio = FSInputFile('gr.ogg')
+    await bot.send_voice(message.chat.id, audio)
+    os.remove('gr.ogg')
 
 
 @dp.message(Command('weather'))
@@ -119,6 +128,7 @@ async def weather(message: Message):
             else:
                 await message.answer('Не удалось получить данные о погоде.')
 
+'''
 @dp.message()
 async def start(message: Message):
     # await message.answer('Это мой ответ тебе!')
@@ -126,6 +136,17 @@ async def start(message: Message):
         await message.answer('Проводится тестирование возможностей бота!')
     else:
         await message.send_copy(chat_id=message.chat.id)
+'''
+
+@dp.message()
+async def translate_message(message: Message):
+    # await message.send_copy(chat_id=message.chat.id)
+    txt = message.text
+    # Перевод сообщения на английский
+    translated = translator.translate(message.text, src='ru', dest='en').text
+    # Отправка переведенного сообщения обратно пользователю
+    await message.answer(translated)
+
 
 async def main():
     await dp.start_polling(bot)
